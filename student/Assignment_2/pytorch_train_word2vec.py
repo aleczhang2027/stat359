@@ -33,11 +33,22 @@ class Word2Vec(nn.Module):
         self.u_embeddings = nn.Embedding(vocab_size, embedding_dim)
         #output/context embedding
         self.v_embeddings = nn.Embedding(vocab_size, embedding_dim)
+    
     def forward(self, center_words, context_words):
-        u = self.u_embeddings(center_words).unsqueeze(2)
-        v = self.v_embeddings(context_words)
-        score = torch.bmm(v, u).squeeze(2)
+        u = self.u_embeddings(center_words)  # [batch, embedding_dim]
+        v = self.v_embeddings(context_words)  # [batch, embedding_dim] or [batch, num_context, embedding_dim]
+        
+        # Handle both 1D context (single word) and 2D context (multiple words)
+        if v.dim() == 2:
+            # Single context word per center: [batch, embedding_dim]
+            score = (u * v).sum(dim=1)  # [batch]
+        else:
+            # Multiple context words per center: [batch, num_context, embedding_dim]
+            u = u.unsqueeze(2)  # [batch, embedding_dim, 1]
+            score = torch.bmm(v, u).squeeze(2)  # [batch, num_context]
+        
         return score
+    
     def get_embeddings(self):
         return self.u_embeddings.weight.detach().cpu().numpy()
     
@@ -92,11 +103,6 @@ def main():
     print(f"Total batches per epoch: {len(dataloader)}")
 
     # Model, Loss, Optimizer
-    def make_targets(batch_size, num_negative_samples, device):
-        targets = torch.zeros(batch_size, 1 + num_negative_samples).to(device)
-        targets[:,0] = 1.0
-        return targets
-    
     model = Word2Vec(vocab_size, EMBEDDING_DIM).to(device)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
@@ -110,35 +116,35 @@ def main():
             center, context = center.to(device), context.to(device)
             batch_curr_size = center.size(0)
 
-            # 1. Sample Negative Context Words (Step 4)
+            optimizer.zero_grad()
+
+            # 1. Positive loss - actual context words
+            pos_logits = model(center, context)
+            pos_loss = criterion(pos_logits, torch.ones_like(pos_logits))
+
+            # 2. Sample Negative Context Words
             neg_context = torch.multinomial(sampling_dist, 
                                             batch_curr_size * NEGATIVE_SAMPLES, 
                                             replacement=True)
             neg_context = neg_context.view(batch_curr_size, NEGATIVE_SAMPLES)
             
             # Collision checking: ensure negative samples don't equal positive context
-            pos = context.view(-1, 1)  # Reshape for broadcasting
-            mask = neg_context.eq(pos)  # Check where negative samples equal positive
+            pos = context.view(-1, 1)
+            mask = neg_context.eq(pos)
             while mask.any():
-                n_bad = int(mask.sum().item())  # Count collisions
+                n_bad = int(mask.sum().item())
                 resample = torch.multinomial(sampling_dist, num_samples=n_bad, replacement=True)
-                neg_context[mask] = resample  # Replace collisions
-                mask = neg_context.eq(pos)  # Check again for new collisions
+                neg_context[mask] = resample
+                mask = neg_context.eq(pos)
 
-            # 2. Combine Contexts: [Batch, 1 + 5]
-            combined_context = torch.cat([context.unsqueeze(1), neg_context], dim=1)
+            # 3. Negative loss - sampled noise words
+            neg_logits = model(center, neg_context)
+            neg_loss = criterion(neg_logits, torch.zeros_like(neg_logits))
 
-            # 3. Generate Targets (Label 1 for positive, 0 for negative)
-            targets = make_targets(batch_curr_size, NEGATIVE_SAMPLES, device)
+            # 4. Combined loss (matching the mathematical formulation)
+            loss = pos_loss + neg_loss
 
-            # 4. Forward Pass
-            outputs = model(center, combined_context)
-
-            # 5. Compute Loss
-            loss = criterion(outputs, targets)
-
-            # 6. Backward Pass
-            optimizer.zero_grad()
+            # 5. Backward Pass
             loss.backward()
             optimizer.step()
 
