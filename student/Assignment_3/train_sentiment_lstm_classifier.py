@@ -70,7 +70,7 @@ def train_and_track(model, train_loader, val_loader, criterion, optimizer, epoch
     history = {
         'train_loss': [], 'val_loss': [],
         'train_f1': [], 'val_f1': [],
-        'train_acc': [], 'val_acc': []  # Added accuracy tracking
+        'train_acc': [], 'val_acc': []  
     }
 
     for epoch in range(epochs):
@@ -110,8 +110,8 @@ def train_and_track(model, train_loader, val_loader, criterion, optimizer, epoch
         history['val_loss'].append(total_val_loss / len(val_loader))
         history['train_f1'].append(f1_score(all_train_labels, all_train_preds, average='macro'))
         history['val_f1'].append(f1_score(all_val_labels, all_val_preds, average='macro'))
-        history['train_acc'].append(accuracy_score(all_train_labels, all_train_preds))  # Added
-        history['val_acc'].append(accuracy_score(all_val_labels, all_val_preds))  # Added
+        history['train_acc'].append(accuracy_score(all_train_labels, all_train_preds))  
+        history['val_acc'].append(accuracy_score(all_val_labels, all_val_preds))  
 
         print(f"Epoch {epoch+1}/{epochs} | Train Loss: {history['train_loss'][-1]:.4f} | Val F1: {history['val_f1'][-1]:.4f} | Val Acc: {history['val_acc'][-1]:.4f}")
 
@@ -120,8 +120,8 @@ def train_and_track(model, train_loader, val_loader, criterion, optimizer, epoch
 # ========== Plotting & Evaluation Functions ==========
 
 def plot_history(history, model_name):
-    fig, axes = plt.subplots(1, 3, figsize=(20, 5))  # Changed to 3 subplots
-    metrics = [('loss', 'Loss'), ('f1', 'Macro F1'), ('acc', 'Accuracy')]  # Added accuracy
+    fig, axes = plt.subplots(1, 3, figsize=(20, 5))  
+    metrics = [('loss', 'Loss'), ('f1', 'Macro F1'), ('acc', 'Accuracy')]  
     
     for i, (key, name) in enumerate(metrics):
         axes[i].plot(history[f'train_{key}'], label=f'Train {name}')

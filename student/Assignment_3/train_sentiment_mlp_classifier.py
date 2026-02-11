@@ -133,7 +133,7 @@ print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
 criterion = nn.CrossEntropyLoss(weight=class_weights_tensor)
 optimizer = optim.AdamW(model.parameters(), lr=2e-3, weight_decay=0.01)
 
-# IMPROVED: Cosine Annealing Learning Rate Scheduler
+#  Cosine Annealing Learning Rate Scheduler
 scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
     optimizer, 
     T_0=10,        # Restart every 10 epochs
@@ -146,7 +146,7 @@ scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
 history = {
     'train_loss': [], 'val_loss': [], 
     'train_f1': [], 'val_f1': [], 
-    'train_acc': [], 'val_acc': [],  # Added accuracy tracking
+    'train_acc': [], 'val_acc': [],  
     'lr': []
 }
 epochs = 150
@@ -192,16 +192,16 @@ for epoch in tqdm(range(epochs)):
     # Metrics calculation
     t_f1 = f1_score(all_labels, all_preds, average='macro')
     v_f1 = f1_score(val_labels, val_preds, average='macro')
-    t_acc = accuracy_score(all_labels, all_preds)  # Added
-    v_acc = accuracy_score(val_labels, val_preds)  # Added
+    t_acc = accuracy_score(all_labels, all_preds)  
+    v_acc = accuracy_score(val_labels, val_preds)  
     current_lr = optimizer.param_groups[0]['lr']
     
     history['train_loss'].append(train_loss / len(X_train2))
     history['val_loss'].append(val_loss / len(X_val))
     history['train_f1'].append(t_f1)
     history['val_f1'].append(v_f1)
-    history['train_acc'].append(t_acc)  # Added
-    history['val_acc'].append(v_acc)    # Added
+    history['train_acc'].append(t_acc) 
+    history['val_acc'].append(v_acc)    
     history['lr'].append(current_lr)
     
     # Print progress every 10 epochs
@@ -233,7 +233,7 @@ print(f"\nTraining completed! Best Val F1: {best_val_f1:.4f}")
 # ========== Plotting Function ==========
 
 def plot_history(history):
-    fig, axes = plt.subplots(1, 3, figsize=(24, 5))  # Changed to 3 subplots
+    fig, axes = plt.subplots(1, 3, figsize=(24, 5)) 
     
     # Loss plot
     axes[0].plot(history['train_loss'], label='Train Loss', alpha=0.8)
@@ -253,7 +253,7 @@ def plot_history(history):
     axes[1].legend()
     axes[1].grid(True, alpha=0.3)
     
-    # Accuracy plot - ADDED
+    # Accuracy plot 
     axes[2].plot(history['train_acc'], label='Train Accuracy', alpha=0.8)
     axes[2].plot(history['val_acc'], label='Val Accuracy', alpha=0.8)
     axes[2].set_title('Training and Validation Accuracy', fontsize=14, fontweight='bold')
